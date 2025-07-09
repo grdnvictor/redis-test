@@ -51,6 +51,7 @@ func (s *Server) Start() error {
 	}
 
 	s.listener = listener
+	log.Printf("Redis server listening on %s", address)
 
 	// Boucle d'acceptation des connexions
 	for {
@@ -65,6 +66,8 @@ func (s *Server) Start() error {
 				continue
 			}
 		}
+
+		log.Printf("New connection from %s", conn.RemoteAddr())
 
 		// Vérification du nombre maximum de connexions
 		s.clientsMutex.Lock()
@@ -109,6 +112,7 @@ func (s *Server) Stop() error {
 func (s *Server) handleClient(conn net.Conn) {
 	defer s.wg.Done()
 	defer func() {
+		log.Printf("Connection closed from %s", conn.RemoteAddr())
 		conn.Close()
 		s.clientsMutex.Lock()
 		delete(s.clients, conn)
@@ -124,10 +128,13 @@ func (s *Server) handleClient(conn net.Conn) {
 		case <-s.shutdown:
 			return
 		default:
+			// Définir un timeout pour éviter les blocages
+			conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+
 			// Parsing de la commande
 			args, err := parser.ParseCommand()
 			if err != nil {
-				log.Printf("Parse error: %v", err)
+				log.Printf("Parse error from %s: %v", conn.RemoteAddr(), err)
 				return
 			}
 
@@ -141,7 +148,7 @@ func (s *Server) handleClient(conn net.Conn) {
 
 			// Exécution de la commande
 			if err := s.commands.Execute(command, commandArgs, s.storage, encoder); err != nil {
-				log.Printf("Command execution error: %v", err)
+				log.Printf("Command execution error for %s: %v", conn.RemoteAddr(), err)
 				encoder.WriteError("ERR internal server error")
 			}
 		}

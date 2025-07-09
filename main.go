@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"redis-go/internal/storage"
 	"syscall"
 
 	"redis-go/internal/config"
@@ -41,5 +40,4 @@ func main() {
 	}
 
 	log.Println("Server stopped")
-	storage.TestPatternMatch()
 }

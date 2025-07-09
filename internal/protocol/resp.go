@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 )
 
 // RESP (Redis Serialization Protocol) constants
@@ -50,7 +49,7 @@ func (p *Parser) parseArray() ([]string, error) {
 	// Lecture du nombre d'éléments
 	lengthStr, err := p.readLine()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read array length: %v", err)
 	}
 
 	length, err := strconv.Atoi(lengthStr)
@@ -58,12 +57,16 @@ func (p *Parser) parseArray() ([]string, error) {
 		return nil, fmt.Errorf("invalid array length: %s", lengthStr)
 	}
 
+	if length <= 0 {
+		return []string{}, nil
+	}
+
 	// Lecture de chaque élément
 	elements := make([]string, length)
 	for i := 0; i < length; i++ {
 		element, err := p.parseBulkString()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse element %d: %v", i, err)
 		}
 		elements[i] = element
 	}
@@ -76,7 +79,7 @@ func (p *Parser) parseBulkString() (string, error) {
 	// Lecture du type (doit être $)
 	typeByte, err := p.reader.ReadByte()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read bulk string type: %v", err)
 	}
 
 	if typeByte != BulkString {
@@ -86,7 +89,7 @@ func (p *Parser) parseBulkString() (string, error) {
 	// Lecture de la longueur
 	lengthStr, err := p.readLine()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read bulk string length: %v", err)
 	}
 
 	length, err := strconv.Atoi(lengthStr)
@@ -99,17 +102,26 @@ func (p *Parser) parseBulkString() (string, error) {
 		return "", nil
 	}
 
+	if length < 0 {
+		return "", fmt.Errorf("invalid bulk string length: %d", length)
+	}
+
 	// Lecture du contenu
 	content := make([]byte, length)
 	_, err = io.ReadFull(p.reader, content)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read bulk string content: %v", err)
 	}
 
 	// Lecture du CRLF final
-	_, err = p.readLine()
+	crlf := make([]byte, 2)
+	_, err = io.ReadFull(p.reader, crlf)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read CRLF after bulk string: %v", err)
+	}
+
+	if crlf[0] != '\r' || crlf[1] != '\n' {
+		return "", fmt.Errorf("expected CRLF, got %v", crlf)
 	}
 
 	return string(content), nil
@@ -117,16 +129,30 @@ func (p *Parser) parseBulkString() (string, error) {
 
 // readLine lit une ligne complète (jusqu'au CRLF)
 func (p *Parser) readLine() (string, error) {
-	line, err := p.reader.ReadString('\n')
-	if err != nil {
-		return "", err
+	var result []byte
+
+	for {
+		b, err := p.reader.ReadByte()
+		if err != nil {
+			return "", err
+		}
+
+		if b == '\r' {
+			// Lire le \n suivant
+			next, err := p.reader.ReadByte()
+			if err != nil {
+				return "", err
+			}
+			if next != '\n' {
+				return "", fmt.Errorf("expected \\n after \\r, got %c", next)
+			}
+			break
+		}
+
+		result = append(result, b)
 	}
 
-	// Suppression du CRLF
-	line = strings.TrimSuffix(line, "\r\n")
-	line = strings.TrimSuffix(line, "\n")
-
-	return line, nil
+	return string(result), nil
 }
 
 // Encoder pour les réponses RESP
