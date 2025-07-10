@@ -1,4 +1,7 @@
 # Redis-Go
+[![Go 1.24+](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://golang.org/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://docker.com/)
+[![badge de fatigue](https://img.shields.io/badge/On%20préfère%20le%20JS/TS%20pitié-💀-F7DF1E?style=flat&logo=typescript&logoColor=white&labelColor=3178C6)](https://www.typescriptlang.org/)
 > Implémentation Redis partielle en Go avec protocole RESP (REdis Serialization Protocol) et support des types de données courants.
 
 ## 👨‍💻 Équipe de développement
@@ -8,9 +11,6 @@
 |  **GRANDIN Victor**  | **`5IW2`** |
 |  **NKUMBA Estelle**  | **`5IW2`** |
 
-[![Go 1.24+](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://golang.org/)
-[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://docker.com/)
-[![badge de fatigue](https://img.shields.io/badge/On%20préfère%20le%20JS/TS%20pitié-💀-F7DF1E?style=flat&logo=typescript&logoColor=white&labelColor=3178C6)](https://www.typescriptlang.org/)
 ## Fonctionnalités
 
 ### Types de données
