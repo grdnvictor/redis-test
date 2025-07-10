@@ -127,7 +127,7 @@ redis-go/
 ```mermaid
 graph TB
     %% === CLIENTS ET ENTREE ===
-    subgraph "🌐 Clients & Network"
+    subgraph "🌐 Clients Network"
         CLI[redis-cli]
         APP[Application]
         BENCH[redis-benchmark]
@@ -136,76 +136,76 @@ graph TB
     
     %% === POINT D'ENTREE ===
     subgraph "🎯 Main Entry Point"
-        MAIN[main.go<br/>🔧 Signal handling<br/>🚀 Server bootstrap<br/>⏹️ Graceful shutdown]
+        MAIN["main.go<br/>Signal handling<br/>Server bootstrap<br/>Graceful shutdown"]
     end
     
     %% === CONFIGURATION ===
     subgraph "⚙️ Configuration Layer"
-        CONFIG[server_config.go<br/>🌍 Environment vars<br/>🔧 Default values<br/>📊 Performance tuning]
-        ENV[(Environment<br/>Variables)]
+        CONFIG["server_config.go<br/>Environment vars<br/>Default values<br/>Performance tuning"]
+        ENV[("Environment<br/>Variables")]
     end
     
     %% === SERVEUR PRINCIPAL ===
     subgraph "🖥️ Server Core"
-        CORE[server_core.go<br/>🏗️ Server instance<br/>🔗 Component wiring<br/>🎮 Lifecycle management]
+        CORE["server_core.go<br/>Server instance<br/>Component wiring<br/>Lifecycle management"]
         
-        LIFECYCLE[server_lifecycle.go<br/>🚀 TCP Listener<br/>🔌 Connection accept<br/>⏹️ Graceful stop<br/>📊 Connection limits]
+        LIFECYCLE["server_lifecycle.go<br/>TCP Listener<br/>Connection accept<br/>Graceful stop<br/>Connection limits"]
         
-        HANDLER[client_handler.go<br/>⚡ Goroutine per client<br/>📝 Command parsing<br/>⏰ Timeout management<br/>🔒 Error handling]
+        HANDLER["client_handler.go<br/>Goroutine per client<br/>Command parsing<br/>Timeout management<br/>Error handling"]
         
-        GC[garbage_collector.go<br/>🧹 TTL cleanup<br/>⏰ Periodic scanning<br/>📊 Cleanup metrics<br/>🎯 Memory optimization]
+        GC["garbage_collector.go<br/>TTL cleanup<br/>Periodic scanning<br/>Cleanup metrics<br/>Memory optimization"]
     end
     
     %% === PROTOCOLE RESP ===
     subgraph "🌐 RESP Protocol"
-        CONSTANTS[resp_constants.go<br/>📋 Protocol types<br/>🔤 RESP symbols]
+        CONSTANTS["resp_constants.go<br/>Protocol types<br/>RESP symbols"]
         
-        PARSER[resp_parser.go<br/>📥 Stream parsing<br/>🔍 Type detection<br/>📊 Array handling<br/>🛡️ Error validation<br/>📝 Bulk string parsing]
+        PARSER["resp_parser.go<br/>Stream parsing<br/>Type detection<br/>Array handling<br/>Error validation<br/>Bulk string parsing"]
         
-        ENCODER[resp_encoder.go<br/>📤 Response encoding<br/>✅ Simple strings<br/>❌ Error messages<br/>🔢 Integers<br/>📋 Arrays<br/>💾 Bulk strings]
+        ENCODER["resp_encoder.go<br/>Response encoding<br/>Simple strings<br/>Error messages<br/>Integers<br/>Arrays<br/>Bulk strings"]
     end
     
     %% === REGISTRY DE COMMANDES ===
     subgraph "⚡ Command System"
-        REGISTRY[command_handler.go<br/>📋 Command registry<br/>🔍 Command dispatch<br/>✅ Validation<br/>🌍 French errors]
+        REGISTRY["command_handler.go<br/>Command registry<br/>Command dispatch<br/>Validation<br/>French errors"]
         
-        STRING_CMD[string_commands.go<br/>SET/GET/DEL<br/>EXISTS/TYPE/KEYS<br/>🔍 Pattern matching<br/>⏰ TTL support]
+        STRING_CMD["string_commands.go<br/>SET/GET/DEL<br/>EXISTS/TYPE/KEYS<br/>Pattern matching<br/>TTL support"]
         
-        COUNTER_CMD[counter_commands.go<br/>INCR/DECR<br/>INCRBY/DECRBY<br/>🔢 Atomic operations<br/>✅ Type validation]
+        COUNTER_CMD["counter_commands.go<br/>INCR/DECR<br/>INCRBY/DECRBY<br/>Atomic operations<br/>Type validation"]
         
-        LIST_CMD[list_commands.go<br/>LPUSH/RPUSH<br/>LPOP/RPOP<br/>LLEN/LRANGE<br/>📊 Index handling]
+        LIST_CMD["list_commands.go<br/>LPUSH/RPUSH<br/>LPOP/RPOP<br/>LLEN/LRANGE<br/>Index handling"]
         
-        SET_CMD[set_commands.go<br/>SADD/SMEMBERS<br/>SISMEMBER<br/>🎯 Unique members<br/>🔍 Membership tests]
+        SET_CMD["set_commands.go<br/>SADD/SMEMBERS<br/>SISMEMBER<br/>Unique members<br/>Membership tests"]
         
-        HASH_CMD[hash_commands.go<br/>HSET/HGET<br/>HGETALL<br/>🗂️ Field management<br/>📊 Batch operations]
+        HASH_CMD["hash_commands.go<br/>HSET/HGET<br/>HGETALL<br/>Field management<br/>Batch operations"]
         
-        UTIL_CMD[utility_commands.go<br/>PING/ECHO<br/>DBSIZE/FLUSHALL<br/>ALAIDE<br/>🔧 Server utilities]
+        UTIL_CMD["utility_commands.go<br/>PING/ECHO<br/>DBSIZE/FLUSHALL<br/>ALAIDE<br/>Server utilities"]
     end
     
     %% === MOTEUR DE STOCKAGE ===
     subgraph "💾 Storage Engine"
-        CORE_STORAGE[storage_core.go<br/>🗃️ Main storage map<br/>🔒 RWMutex concurrency<br/>⏰ TTL management<br/>🧹 Lazy expiration<br/>📊 Size tracking]
+        CORE_STORAGE["storage_core.go<br/>Main storage map<br/>RWMutex concurrency<br/>TTL management<br/>Lazy expiration<br/>Size tracking"]
         
-        DATATYPES[data_types.go<br/>📋 Type definitions<br/>🎯 Value structure<br/>⏰ Expiration time<br/>🏷️ Type enumeration]
+        DATATYPES["data_types.go<br/>Type definitions<br/>Value structure<br/>Expiration time<br/>Type enumeration"]
         
-        LIST_OPS[list_operations.go<br/>📝 Bidirectional ops<br/>🔄 PUSH/POP logic<br/>📊 Range operations<br/>📏 Length calculation<br/>🗑️ Auto cleanup]
+        LIST_OPS["list_operations.go<br/>Bidirectional ops<br/>PUSH/POP logic<br/>Range operations<br/>Length calculation<br/>Auto cleanup"]
         
-        SET_OPS[set_operations.go<br/>🎯 Unique elements<br/>➕ Member addition<br/>🔍 Membership check<br/>📋 Member listing]
+        SET_OPS["set_operations.go<br/>Unique elements<br/>Member addition<br/>Membership check<br/>Member listing"]
         
-        HASH_OPS[hash_operations.go<br/>🗂️ Field operations<br/>🔧 Field setting<br/>📖 Field retrieval<br/>📋 Full hash dump]
+        HASH_OPS["hash_operations.go<br/>Field operations<br/>Field setting<br/>Field retrieval<br/>Full hash dump"]
         
-        PATTERN[pattern_matching.go<br/>🔍 Glob patterns<br/>⭐ Wildcard matching<br/>❓ Single char match<br/>📊 Character classes<br/>🚫 Negation support<br/>🔄 Recursive algorithm]
+        PATTERN["pattern_matching.go<br/>Glob patterns<br/>Wildcard matching<br/>Single char match<br/>Character classes<br/>Negation support<br/>Recursive algorithm"]
     end
     
     %% === STRUCTURES DE DONNEES ===
     subgraph "🗃️ Data Structures"
-        STORAGE_MAP[(Main Storage Map<br/>map[string]*RedisStorageValue<br/>🔒 Concurrent access<br/>⏰ TTL tracking)]
+        STORAGE_MAP[("Main Storage Map<br/>Concurrent access<br/>TTL tracking")]
         
-        REDIS_LIST[(RedisListStructure<br/>[]string elements<br/>📊 Ordered sequence<br/>🔄 Bidirectional)]
+        REDIS_LIST[("RedisListStructure<br/>String elements<br/>Ordered sequence<br/>Bidirectional")]
         
-        REDIS_SET[(RedisSetStructure<br/>map[string]bool<br/>🎯 Unique members<br/>⚡ Fast lookup)]
+        REDIS_SET[("RedisSetStructure<br/>String to bool map<br/>Unique members<br/>Fast lookup")]
         
-        REDIS_HASH[(RedisHashStructure<br/>map[string]string<br/>🗂️ Field-value pairs<br/>📋 Object storage)]
+        REDIS_HASH[("RedisHashStructure<br/>String to string map<br/>Field-value pairs<br/>Object storage")]
     end
     
     %% === FLUX PRINCIPAUX ===
