@@ -122,18 +122,171 @@ redis-go/
 └── 📚 README.md
 ```
 
-### 🔄 Flow de traitement
+### 🔄 Architecture complète
 
 ```mermaid
-graph TD
-    A[Client TCP] --> B[RESP Parser]
-    B --> C[Command Registry]
-    C --> D[Storage Engine]
-    D --> E[RESP Encoder]
-    E --> A
+graph TB
+    %% === CLIENTS ET ENTREE ===
+    subgraph "🌐 Clients & Network"
+        CLI[redis-cli]
+        APP[Application]
+        BENCH[redis-benchmark]
+        DOCKER[Docker Client]
+    end
     
-    F[Garbage Collector] --> D
-    G[Pattern Matcher] --> D
+    %% === POINT D'ENTREE ===
+    subgraph "🎯 Main Entry Point"
+        MAIN[main.go<br/>🔧 Signal handling<br/>🚀 Server bootstrap<br/>⏹️ Graceful shutdown]
+    end
+    
+    %% === CONFIGURATION ===
+    subgraph "⚙️ Configuration Layer"
+        CONFIG[server_config.go<br/>🌍 Environment vars<br/>🔧 Default values<br/>📊 Performance tuning]
+        ENV[(Environment<br/>Variables)]
+    end
+    
+    %% === SERVEUR PRINCIPAL ===
+    subgraph "🖥️ Server Core"
+        CORE[server_core.go<br/>🏗️ Server instance<br/>🔗 Component wiring<br/>🎮 Lifecycle management]
+        
+        LIFECYCLE[server_lifecycle.go<br/>🚀 TCP Listener<br/>🔌 Connection accept<br/>⏹️ Graceful stop<br/>📊 Connection limits]
+        
+        HANDLER[client_handler.go<br/>⚡ Goroutine per client<br/>📝 Command parsing<br/>⏰ Timeout management<br/>🔒 Error handling]
+        
+        GC[garbage_collector.go<br/>🧹 TTL cleanup<br/>⏰ Periodic scanning<br/>📊 Cleanup metrics<br/>🎯 Memory optimization]
+    end
+    
+    %% === PROTOCOLE RESP ===
+    subgraph "🌐 RESP Protocol"
+        CONSTANTS[resp_constants.go<br/>📋 Protocol types<br/>🔤 RESP symbols]
+        
+        PARSER[resp_parser.go<br/>📥 Stream parsing<br/>🔍 Type detection<br/>📊 Array handling<br/>🛡️ Error validation<br/>📝 Bulk string parsing]
+        
+        ENCODER[resp_encoder.go<br/>📤 Response encoding<br/>✅ Simple strings<br/>❌ Error messages<br/>🔢 Integers<br/>📋 Arrays<br/>💾 Bulk strings]
+    end
+    
+    %% === REGISTRY DE COMMANDES ===
+    subgraph "⚡ Command System"
+        REGISTRY[command_handler.go<br/>📋 Command registry<br/>🔍 Command dispatch<br/>✅ Validation<br/>🌍 French errors]
+        
+        STRING_CMD[string_commands.go<br/>SET/GET/DEL<br/>EXISTS/TYPE/KEYS<br/>🔍 Pattern matching<br/>⏰ TTL support]
+        
+        COUNTER_CMD[counter_commands.go<br/>INCR/DECR<br/>INCRBY/DECRBY<br/>🔢 Atomic operations<br/>✅ Type validation]
+        
+        LIST_CMD[list_commands.go<br/>LPUSH/RPUSH<br/>LPOP/RPOP<br/>LLEN/LRANGE<br/>📊 Index handling]
+        
+        SET_CMD[set_commands.go<br/>SADD/SMEMBERS<br/>SISMEMBER<br/>🎯 Unique members<br/>🔍 Membership tests]
+        
+        HASH_CMD[hash_commands.go<br/>HSET/HGET<br/>HGETALL<br/>🗂️ Field management<br/>📊 Batch operations]
+        
+        UTIL_CMD[utility_commands.go<br/>PING/ECHO<br/>DBSIZE/FLUSHALL<br/>ALAIDE<br/>🔧 Server utilities]
+    end
+    
+    %% === MOTEUR DE STOCKAGE ===
+    subgraph "💾 Storage Engine"
+        CORE_STORAGE[storage_core.go<br/>🗃️ Main storage map<br/>🔒 RWMutex concurrency<br/>⏰ TTL management<br/>🧹 Lazy expiration<br/>📊 Size tracking]
+        
+        DATATYPES[data_types.go<br/>📋 Type definitions<br/>🎯 Value structure<br/>⏰ Expiration time<br/>🏷️ Type enumeration]
+        
+        LIST_OPS[list_operations.go<br/>📝 Bidirectional ops<br/>🔄 PUSH/POP logic<br/>📊 Range operations<br/>📏 Length calculation<br/>🗑️ Auto cleanup]
+        
+        SET_OPS[set_operations.go<br/>🎯 Unique elements<br/>➕ Member addition<br/>🔍 Membership check<br/>📋 Member listing]
+        
+        HASH_OPS[hash_operations.go<br/>🗂️ Field operations<br/>🔧 Field setting<br/>📖 Field retrieval<br/>📋 Full hash dump]
+        
+        PATTERN[pattern_matching.go<br/>🔍 Glob patterns<br/>⭐ Wildcard matching<br/>❓ Single char match<br/>📊 Character classes<br/>🚫 Negation support<br/>🔄 Recursive algorithm]
+    end
+    
+    %% === STRUCTURES DE DONNEES ===
+    subgraph "🗃️ Data Structures"
+        STORAGE_MAP[(Main Storage Map<br/>map[string]*RedisStorageValue<br/>🔒 Concurrent access<br/>⏰ TTL tracking)]
+        
+        REDIS_LIST[(RedisListStructure<br/>[]string elements<br/>📊 Ordered sequence<br/>🔄 Bidirectional)]
+        
+        REDIS_SET[(RedisSetStructure<br/>map[string]bool<br/>🎯 Unique members<br/>⚡ Fast lookup)]
+        
+        REDIS_HASH[(RedisHashStructure<br/>map[string]string<br/>🗂️ Field-value pairs<br/>📋 Object storage)]
+    end
+    
+    %% === FLUX PRINCIPAUX ===
+    %% Clients vers serveur
+    CLI --> LIFECYCLE
+    APP --> LIFECYCLE
+    BENCH --> LIFECYCLE
+    DOCKER --> LIFECYCLE
+    
+    %% Configuration
+    ENV --> CONFIG
+    CONFIG --> MAIN
+    MAIN --> CORE
+    
+    %% Serveur interne
+    CORE --> LIFECYCLE
+    CORE --> GC
+    LIFECYCLE --> HANDLER
+    
+    %% Protocole
+    HANDLER --> PARSER
+    PARSER --> REGISTRY
+    REGISTRY --> ENCODER
+    ENCODER --> HANDLER
+    
+    %% Commandes vers storage
+    REGISTRY --> STRING_CMD
+    REGISTRY --> COUNTER_CMD
+    REGISTRY --> LIST_CMD
+    REGISTRY --> SET_CMD
+    REGISTRY --> HASH_CMD
+    REGISTRY --> UTIL_CMD
+    
+    %% Storage operations
+    STRING_CMD --> CORE_STORAGE
+    COUNTER_CMD --> CORE_STORAGE
+    LIST_CMD --> LIST_OPS
+    SET_CMD --> SET_OPS
+    HASH_CMD --> HASH_OPS
+    UTIL_CMD --> CORE_STORAGE
+    
+    %% Pattern matching
+    STRING_CMD --> PATTERN
+    PATTERN --> CORE_STORAGE
+    
+    %% Storage vers structures
+    CORE_STORAGE --> STORAGE_MAP
+    LIST_OPS --> STORAGE_MAP
+    LIST_OPS --> REDIS_LIST
+    SET_OPS --> STORAGE_MAP
+    SET_OPS --> REDIS_SET
+    HASH_OPS --> STORAGE_MAP
+    HASH_OPS --> REDIS_HASH
+    
+    %% Garbage collection
+    GC --> CORE_STORAGE
+    GC --> STORAGE_MAP
+    
+    %% Types et constantes
+    DATATYPES --> CORE_STORAGE
+    DATATYPES --> LIST_OPS
+    DATATYPES --> SET_OPS
+    DATATYPES --> HASH_OPS
+    CONSTANTS --> PARSER
+    CONSTANTS --> ENCODER
+    
+    %% === STYLES ===
+    classDef clientStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    classDef serverStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef protocolStyle fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef commandStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef storageStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef dataStyle fill:#f1f8e9,stroke:#689f38,stroke-width:3px,color:#000
+    
+    class CLI,APP,BENCH,DOCKER clientStyle
+    class MAIN,CONFIG,ENV clientStyle
+    class CORE,LIFECYCLE,HANDLER,GC serverStyle
+    class CONSTANTS,PARSER,ENCODER protocolStyle
+    class REGISTRY,STRING_CMD,COUNTER_CMD,LIST_CMD,SET_CMD,HASH_CMD,UTIL_CMD commandStyle
+    class CORE_STORAGE,DATATYPES,LIST_OPS,SET_OPS,HASH_OPS,PATTERN storageStyle
+    class STORAGE_MAP,REDIS_LIST,REDIS_SET,REDIS_HASH dataStyle
 ```
 
 ---
