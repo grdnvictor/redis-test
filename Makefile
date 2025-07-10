@@ -1,107 +1,107 @@
-# Redis-Go Makefile
-
-.PHONY: run build test clean dev deps docker-build docker-run docker-test
-
+# Redis-Go Makefile - Version Docker uniquement
+.PHONY: build run down restart \
+        test test-auto \
+        logs cli status \
+        clean fmt deps \
+        help
 # Variables
-BINARY_NAME=redis-go
-BUILD_DIR=bin
-MAIN_FILE=main.go
+COMPOSE_COMMAND = docker compose
+REDIS_SERVICE = redis-go
+REDIS_CLI_SERVICE = redis-cli
+REDIS_TEST_SERVICE = redis-test
 
 # Commandes principales
-run:
-	@echo "Starting Redis-Go server..."
-	go run $(MAIN_FILE)
-
 build:
-	@echo "Building Redis-Go..."
-	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_FILE)
-	@echo "Binary created at $(BUILD_DIR)/$(BINARY_NAME)"
+	@echo "🔨 Construction de l'image Docker..."
+	@$(COMPOSE_COMMAND) build $(REDIS_SERVICE) > /dev/null 2>&1
+	@echo "✅ Image construite"
+
+run: build
+	@echo "🚀 Démarrage du serveur Redis-Go..."
+	@$(COMPOSE_COMMAND) up -d $(REDIS_SERVICE) > /dev/null 2>&1
+	@echo "✅ Serveur démarré en arrière-plan"
+	@echo "💡 Utilisez 'make logs' pour voir les logs"
+	@echo "💡 Utilisez 'make cli' pour vous connecter"
+
 
 test:
-	@echo "Running tests..."
-	go test -v ./...
+	@echo "🧪 Exécution des tests..."
+	@$(COMPOSE_COMMAND) run --rm $(REDIS_SERVICE) go test -v ./... > /dev/null 2>&1
+	@echo "✅ Tests terminés"
 
-clean:
-	@echo "Cleaning build artifacts..."
-	@rm -rf $(BUILD_DIR)
-	go clean
+down:
+	@if $(COMPOSE_COMMAND) ps -q | grep -q .; then \
+		echo "🧹 Nettoyage des conteneurs..."; \
+		$(COMPOSE_COMMAND) down -v > /dev/null 2>&1; \
+		echo "✅ Nettoyage terminé"; \
+	else \
+		echo "ℹ️ Aucun conteneur à nettoyer"; \
+	fi
 
-# Développement
-dev:
-	@echo "Starting in development mode with hot reload..."
-	go run $(MAIN_FILE)
+logs:
+	@echo "📋 Logs du serveur Redis-Go..."
+	@$(COMPOSE_COMMAND) logs -f $(REDIS_SERVICE)
 
-deps:
-	@echo "Installing dependencies..."
-	go mod tidy
-	go mod verify
+# Session interactive redis-cli
+cli:
+	@echo "🐳 Préparation de redis-cli..."
+	@$(COMPOSE_COMMAND) up -d $(REDIS_CLI_SERVICE) > /dev/null 2>&1
+	@echo "✅ Container redis-cli prêt"
+	@echo "🆘 Tapez 'ALAIDE' pour voir toutes les commandes disponibles"
+	@echo "💡 Tapez 'exit' ou Ctrl+C pour quitter"
+	@echo "🔗 Connexion à Redis-Go..."
+	@sleep 1
+	@$(COMPOSE_COMMAND) exec -it $(REDIS_CLI_SERVICE) redis-cli -h $(REDIS_SERVICE) -p 6379 --no-auth-warning
 
-# Tests avancés
-benchmark:
-	@echo "Running benchmarks..."
-	go test -bench=. -benchmem ./...
+# Tests automatisés complets
+test-auto:
+	@echo "🧪 Lancement des tests automatisés..."
+	@$(COMPOSE_COMMAND) up --build $(REDIS_TEST_SERVICE) > /dev/null 2>&1
+	@echo "✅ Tests automatisés terminés"
 
-race:
-	@echo "Running race condition tests..."
-	go test -race ./...
-
-# Docker
-docker-build:
-	@echo "Building Docker image..."
-	docker build -t redis-go .
-
-docker-run: docker-build
-	@echo "Running Redis-Go in Docker..."
-	docker run -p 6379:6379 redis-go
-
-docker-compose-up:
-	@echo "Starting full environment with docker-compose..."
-	docker-compose up --build
-
-docker-compose-test:
-	@echo "Running tests with docker-compose..."
-	docker-compose up --build redis-test
-
-docker-cli:
-	@echo "Starting interactive redis-cli..."
-	docker-compose up --build redis-cli
-
-# Linting et formatage
+# Formatage du code
 fmt:
-	@echo "Formatting code..."
-	go fmt ./...
+	@echo "📝 Formatage du code..."
+	@$(COMPOSE_COMMAND) run --rm $(REDIS_SERVICE) go fmt ./... > /dev/null 2>&1
+	@echo "✅ Code formaté"
 
-vet:
-	@echo "Running go vet..."
-	go vet ./...
+# Redémarrage complet
+restart: down run
 
-# Installation globale
-install: build
-	@echo "Installing Redis-Go globally..."
-	sudo cp $(BUILD_DIR)/$(BINARY_NAME) /usr/local/bin/
+# Statut des services
+status:
+	@echo "📊 Statut des services:"
+	@$(COMPOSE_COMMAND) ps --format "table {{.Name}}\t{{.Image}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}"
 
-# Tests avec le vrai redis-cli
-test-with-redis:
-	@echo "Testing with real redis-cli..."
-	@chmod +x test-scripts/comprehensive-test.sh
-	@./test-scripts/comprehensive-test.sh localhost 6379
+# Mise à jour des dépendances Go
+deps:
+	@echo "📦 Mise à jour des dépendances..."
+	@$(COMPOSE_COMMAND) run --rm $(REDIS_SERVICE) go mod tidy > /dev/null 2>&1
+	@echo "✅ Dépendances mises à jour"
 
-# Help
+# Aide
 help:
-	@echo "Available commands:"
-	@echo "  run                - Start the Redis server"
-	@echo "  build              - Build the binary"
-	@echo "  test               - Run Go tests"
-	@echo "  clean              - Clean build artifacts"
-	@echo "  dev                - Start in development mode"
-	@echo "  deps               - Install/update dependencies"
-	@echo "  fmt                - Format code"
-	@echo "  vet                - Run go vet"
-	@echo "  install            - Install globally"
-	@echo "  docker-build       - Build Docker image"
-	@echo "  docker-run         - Run in Docker"
-	@echo "  docker-compose-up  - Start full environment"
-	@echo "  docker-compose-test- Run automated tests"
-	@echo "  docker-cli         - Interactive redis-cli"
-	@echo "  test-with-redis    - Test with real redis-cli"
+	@echo "🎯 Redis-Go - Commandes Docker disponibles :"
+	@echo ""
+	@echo "📦 Gestion du serveur :"
+	@echo "  run       - Démarre le serveur Redis-Go (en arrière-plan)"
+	@echo "  down      - Arrête tous les services"
+	@echo "  restart   - Redémarre le serveur"
+	@echo "  logs      - Affiche les logs du serveur"
+	@echo "  status    - Statut des services"
+	@echo ""
+	@echo "🔧 Développement :"
+	@echo "  build     - Build l'image Docker"
+	@echo "  test      - Lance les tests unitaires"
+	@echo "  fmt       - Formate le code"
+	@echo "  deps      - Met à jour les dépendances"
+	@echo ""
+	@echo "🎮 Utilisation :"
+	@echo "  cli       - Redis-cli interactif"
+	@echo "  test-auto - Tests automatisés complets"
+	@echo ""
+	@echo "🚀 Démarrage rapide :"
+	@echo "  1. make run     # Démarre le serveur"
+	@echo "  2. make cli     # Se connecte avec redis-cli"
+	@echo "  3. ALAIDE       # Voir toutes les commandes"
+	@echo "  4. ALAIDE SET   # Aide détaillée pour SET"

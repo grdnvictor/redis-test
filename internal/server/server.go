@@ -47,11 +47,11 @@ func (s *Server) Start() error {
 
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %v", address, err)
+		return fmt.Errorf("impossible d'écouter sur %s: %v", address, err)
 	}
 
 	s.listener = listener
-	log.Printf("Redis server listening on %s", address)
+	log.Printf("🚀 Serveur Redis-Go en écoute sur %s", address)
 
 	// Boucle d'acceptation des connexions
 	for {
@@ -62,19 +62,19 @@ func (s *Server) Start() error {
 				// Arrêt normal du serveur
 				return nil
 			default:
-				log.Printf("Failed to accept connection: %v", err)
+				log.Printf("❌ Erreur lors de l'acceptation de connexion: %v", err)
 				continue
 			}
 		}
 
-		log.Printf("New connection from %s", conn.RemoteAddr())
+		log.Printf("🔗 Nouvelle connexion depuis %s", conn.RemoteAddr())
 
 		// Vérification du nombre maximum de connexions
 		s.clientsMutex.Lock()
 		if len(s.clients) >= s.config.MaxConnections {
 			s.clientsMutex.Unlock()
 			conn.Close()
-			log.Printf("Connection rejected: max connections reached (%d)", s.config.MaxConnections)
+			log.Printf("🚫 Connexion refusée: limite atteinte (%d connexions max)", s.config.MaxConnections)
 			continue
 		}
 
@@ -89,6 +89,7 @@ func (s *Server) Start() error {
 
 // Stop arrête le serveur proprement
 func (s *Server) Stop() error {
+	log.Printf("⏹️  Arrêt du serveur en cours...")
 	close(s.shutdown)
 
 	if s.listener != nil {
@@ -97,10 +98,15 @@ func (s *Server) Stop() error {
 
 	// Fermeture de toutes les connexions clients
 	s.clientsMutex.Lock()
+	clientCount := len(s.clients)
 	for conn := range s.clients {
 		conn.Close()
 	}
 	s.clientsMutex.Unlock()
+
+	if clientCount > 0 {
+		log.Printf("🔌 Fermeture de %d connexions clients...", clientCount)
+	}
 
 	// Attente de la fin de toutes les goroutines
 	s.wg.Wait()
@@ -112,7 +118,7 @@ func (s *Server) Stop() error {
 func (s *Server) handleClient(conn net.Conn) {
 	defer s.wg.Done()
 	defer func() {
-		log.Printf("Connection closed from %s", conn.RemoteAddr())
+		log.Printf("🔌 Connexion fermée depuis %s", conn.RemoteAddr())
 		conn.Close()
 		s.clientsMutex.Lock()
 		delete(s.clients, conn)
@@ -134,7 +140,12 @@ func (s *Server) handleClient(conn net.Conn) {
 			// Parsing de la commande
 			args, err := parser.ParseCommand()
 			if err != nil {
-				log.Printf("Parse error from %s: %v", conn.RemoteAddr(), err)
+				// Log différencié selon le type d'erreur
+				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+					log.Printf("⏰ Timeout de connexion pour %s", conn.RemoteAddr())
+				} else {
+					log.Printf("⚠️  Erreur de parsing depuis %s: %v", conn.RemoteAddr(), err)
+				}
 				return
 			}
 
@@ -146,10 +157,13 @@ func (s *Server) handleClient(conn net.Conn) {
 			command := args[0]
 			commandArgs := args[1:]
 
+			// Log des commandes (optionnel, peut être verbeux)
+			// log.Printf("📝 Commande reçue de %s: %s %v", conn.RemoteAddr(), command, commandArgs)
+
 			// Exécution de la commande
 			if err := s.commands.Execute(command, commandArgs, s.storage, encoder); err != nil {
-				log.Printf("Command execution error for %s: %v", conn.RemoteAddr(), err)
-				encoder.WriteError("ERR internal server error")
+				log.Printf("❌ Erreur d'exécution de commande pour %s: %v", conn.RemoteAddr(), err)
+				encoder.WriteError("ERREUR : erreur interne du serveur")
 			}
 		}
 	}
@@ -164,15 +178,18 @@ func (s *Server) startExpirationGC() {
 		ticker := time.NewTicker(s.config.ExpirationCheckInterval)
 		defer ticker.Stop()
 
+		log.Printf("🧹 Garbage collector démarré (intervalle: %v)", s.config.ExpirationCheckInterval)
+
 		for {
 			select {
 			case <-s.shutdown:
+				log.Printf("🧹 Arrêt du garbage collector")
 				return
 			case <-ticker.C:
 				// Nettoyage des clés expirées
 				cleaned := s.storage.CleanupExpired()
 				if cleaned > 0 {
-					log.Printf("Cleaned %d expired keys", cleaned)
+					log.Printf("🧹 Nettoyage: %d clés expirées supprimées", cleaned)
 				}
 			}
 		}

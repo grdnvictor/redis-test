@@ -12,7 +12,7 @@ services:
       - redis-network
     restart: unless-stopped
 
-  # Container avec redis-cli pour tester
+  # Container avec redis-cli optimisé
   redis-cli:
     image: redis:7-alpine
     stop_grace_period: 1s
@@ -20,11 +20,19 @@ services:
       - redis-go
     networks:
       - redis-network
-    # Mode interactif pour utiliser redis-cli
     stdin_open: true
     tty: true
-    # Commande par défaut qui se connecte à ton serveur
-    command: redis-cli -h redis-go -p 6379
+    environment:
+      # Variables pour améliorer l'expérience + UTF-8
+      - TERM=xterm-256color
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - REDISCLI_HISTFILE=/tmp/.rediscli_history
+    volumes:
+      # Garde l'historique entre les sessions
+      - redis-cli-data:/tmp
+    # Commande par défaut simple et propre
+    command: redis-cli -h redis-go -p 6379 --no-auth-warning
 
   # Alternative : container de test avec scripts
 #  redis-test:
@@ -52,3 +60,6 @@ services:
 networks:
   redis-network:
     driver: bridge
+
+volumes:
+  redis-cli-data:

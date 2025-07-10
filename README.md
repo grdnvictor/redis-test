@@ -24,7 +24,8 @@ make run
 ### Option 2: Lancement avec Docker
 ```bash
 # Lancer l'environnement complet
-docker compose up --build
+make docker
+# ou: docker compose up --build
 
 # Dans un autre terminal, utiliser redis-cli
 docker compose exec redis-cli redis-cli -h redis-go -p 6379
@@ -182,21 +183,21 @@ redis-go/
 
 #### 1. Storage (`internal/storage`)
 - **Stockage unifié** avec `map[string]*Value`
-- **Types multiples** : String, List, Set, Hash (+ ZSet prévu)
+- **Types multiples** : String, List, Set, Hash
 - **TTL par valeur** avec expiration lazy et active
 - **Concurrence** gérée par `sync.RWMutex`
 - **Pattern matching** complet (glob style Redis)
 
 #### 2. Protocol (`internal/protocol`)
 - **Parser RESP robuste** avec gestion d'erreurs détaillée
-- **Support complet** : Arrays, Bulk Strings, Integers, Errors
+- **Support complet** : Arrays, Bulk Strings, Integers, Errors, Simple Strings
 - **Encoder optimisé** pour les réponses
 - **Gestion des timeouts** et connexions instables
 
 #### 3. Commands (`internal/commands`)
 - **Registry pattern** pour toutes les commandes
 - **Validation stricte** des arguments et types
-- **Gestion d'erreurs** compatible Redis
+- **Messages d'erreur** en français et explicites
 - **Extensibilité** facile pour nouvelles commandes
 
 #### 4. Server (`internal/server`)
@@ -209,7 +210,7 @@ redis-go/
 
 #### Types de données
 - **Value struct** unifié avec type et TTL
-- **Interfaces spécialisées** pour chaque type de données
+- **Structures spécialisées** pour chaque type de données (RedisList, RedisSet, RedisHash)
 - **Lazy expiration** à la lecture + nettoyage actif
 - **Pattern matching** avec algorithme récursif optimisé
 
@@ -236,7 +237,7 @@ redis-go/
 - [x] **Commandes Hash** : HSET/HGET/HGETALL
 - [x] **Pattern matching** : Support complet des patterns glob Redis
 - [x] **Expiration automatique** : TTL avec nettoyage lazy et actif
-- [x] **Gestion d'erreurs** : Messages compatibles Redis
+- [x] **Messages d'erreur** : Messages en français et explicites
 - [x] **Configuration** par variables d'environnement
 - [x] **Docker** : Build multi-stage et compose ready
 
@@ -264,12 +265,6 @@ redis-go/
 - [ ] **Info command** : Statistiques serveur et mémoire
 - [ ] **Slow log** : Log des commandes lentes
 
-### Clustering (avancé)
-- [ ] **Réplication** : Master/slave avec sync
-- [ ] **Sharding** : Distribution des clés
-- [ ] **Consensus** : Raft pour cohérence
-- [ ] **Failover** : Basculement automatique
-
 ## 🧪 Tests et validation
 
 ### Tests unitaires
@@ -281,64 +276,48 @@ make test
 go test -cover ./...
 
 # Tests de race conditions
-make race
-
-# Benchmarks
-make benchmark
+go test -race ./...
 ```
 
 ### Tests d'intégration
 ```bash
 # Test avec le vrai redis-cli
-make test-with-redis
+make test-cli
 
 # Tests automatisés via Docker
-docker compose up redis-test
+make docker
 
-# Tests de charge
+# Tests de charge (nécessite redis-benchmark)
 redis-benchmark -h localhost -p 6379 -q -n 100000
-```
-
-### Validation Redis
-```bash
-# Comparaison comportementale avec Redis officiel
-redis-cli -h localhost -p 6379 --latency-history
-redis-cli -h localhost -p 6379 info memory
 ```
 
 ## 🔧 Développement
 
 ### Commandes utiles
 ```bash
-# Développement avec hot reload
-make dev
+# Développement
+make run       # Démarre le serveur
+make build     # Compile le binaire
+make test      # Lance les tests
+make docker    # Lance avec Docker
 
-# Build optimisé
-make build
-
-# Linting et formatage
-make fmt
-make vet
-
-# Docker local
-make docker-build
-make docker-run
-
-# Installation globale
-make install
+# Maintenance
+make fmt       # Formate le code
+make deps      # Met à jour les dépendances
+make clean     # Nettoie les artefacts
+make help      # Affiche l'aide
 ```
 
 ### Ajouter une nouvelle commande
 
-1. **Étendre le storage** si nécessaire (nouveau type de données)
-2. **Ajouter la méthode** dans `internal/storage/storage.go`
-3. **Créer le handler** dans `internal/commands/commands.go`
-4. **Enregistrer** dans `registerCommands()`
-5. **Tester** avec des tests unitaires
+1. **Ajouter la méthode** dans `internal/storage/storage.go` si nécessaire
+2. **Créer le handler** dans `internal/commands/commands.go`
+3. **Enregistrer** dans `registerCommands()`
+4. **Tester** avec des tests unitaires
 
 Exemple pour une commande `STRLEN` :
 ```go
-// Dans storage.go
+// Dans storage.go (si nécessaire)
 func (s *Storage) StringLen(key string) int {
     value := s.Get(key)
     if value == nil || value.Type != TypeString {
@@ -350,7 +329,7 @@ func (s *Storage) StringLen(key string) int {
 // Dans commands.go
 func (r *Registry) handleStrLen(args []string, store *storage.Storage, encoder *protocol.Encoder) error {
     if len(args) != 1 {
-        return encoder.WriteError("ERR wrong number of arguments for 'strlen' command")
+        return encoder.WriteError("ERREUR : nombre d'arguments incorrect pour 'STRLEN' (attendu: STRLEN clé)")
     }
     
     length := store.StringLen(args[0])
@@ -375,18 +354,6 @@ r.commands["STRLEN"] = r.handleStrLen
 - **Pattern matching** : Algorithme récursif optimisé
 - **Garbage collection** : Nettoyage actif + lazy des TTL
 - **Parser RESP** : Lecture streaming sans copies inutiles
-
-### Profiling
-```bash
-# Profiling CPU
-go tool pprof http://localhost:6060/debug/pprof/profile
-
-# Profiling mémoire  
-go tool pprof http://localhost:6060/debug/pprof/heap
-
-# Tests de charge
-redis-benchmark -h localhost -p 6379 -t set,get -n 1000000 -q
-```
 
 ---
 

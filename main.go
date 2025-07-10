@@ -24,20 +24,20 @@ func main() {
 
 	// Démarrage du serveur dans une goroutine séparée
 	go func() {
-		log.Printf("Starting Redis server on %s:%d", cfg.Host, cfg.Port)
+		log.Printf("🎯 Démarrage du serveur Redis-Go sur %s:%d", cfg.Host, cfg.Port)
 		if err := redisServer.Start(); err != nil {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Fatalf("❌ Impossible de démarrer le serveur: %v", err)
 		}
 	}()
 
 	// Attente du signal d'arrêt
 	<-interrupt
-	fmt.Println("\nShutting down server...")
+	fmt.Println("\n🛑 Arrêt du serveur en cours...")
 
 	// Arrêt propre du serveur
 	if err := redisServer.Stop(); err != nil {
-		log.Printf("Error during shutdown: %v", err)
+		log.Printf("⚠️  Erreur lors de l'arrêt: %v", err)
 	}
 
-	log.Println("Server stopped")
+	log.Println("✅ Serveur arrêté proprement")
 }
