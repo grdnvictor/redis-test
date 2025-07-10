@@ -30,50 +30,123 @@ func NewRedisCommandRegistry() *RedisCommandRegistry {
 
 // registerAllCommands enregistre toutes les commandes supportées
 func (commandRegistry *RedisCommandRegistry) registerAllCommands() {
-	// Commandes String
-	commandRegistry.registeredCommands["SET"] = commandRegistry.handleSetCommand
-	commandRegistry.registeredCommands["GET"] = commandRegistry.handleGetCommand
-	commandRegistry.registeredCommands["DEL"] = commandRegistry.handleDeleteCommand
-	commandRegistry.registeredCommands["EXISTS"] = commandRegistry.handleExistsCommand
-	commandRegistry.registeredCommands["KEYS"] = commandRegistry.handleKeysCommand
-	commandRegistry.registeredCommands["TYPE"] = commandRegistry.handleTypeCommand
-	commandRegistry.registeredCommands["INCR"] = commandRegistry.handleIncrementCommand
-	commandRegistry.registeredCommands["DECR"] = commandRegistry.handleDecrementCommand
-	commandRegistry.registeredCommands["INCRBY"] = commandRegistry.handleIncrementByCommand
-	commandRegistry.registeredCommands["DECRBY"] = commandRegistry.handleDecrementByCommand
+	commands := map[string]RedisCommandHandler{
+		// Commandes String
+		"SET":    commandRegistry.handleSetCommand,
+		"GET":    commandRegistry.handleGetCommand,
+		"DEL":    commandRegistry.handleDeleteCommand,
+		"EXISTS": commandRegistry.handleExistsCommand,
+		"KEYS":   commandRegistry.handleKeysCommand,
+		"TYPE":   commandRegistry.handleTypeCommand,
+		"INCR":   commandRegistry.handleIncrementCommand,
+		"DECR":   commandRegistry.handleDecrementCommand,
+		"INCRBY": commandRegistry.handleIncrementByCommand,
+		"DECRBY": commandRegistry.handleDecrementByCommand,
 
-	// Commandes List
-	commandRegistry.registeredCommands["LPUSH"] = commandRegistry.handleLeftPushCommand
-	commandRegistry.registeredCommands["RPUSH"] = commandRegistry.handleRightPushCommand
-	commandRegistry.registeredCommands["LPOP"] = commandRegistry.handleLeftPopCommand
-	commandRegistry.registeredCommands["RPOP"] = commandRegistry.handleRightPopCommand
-	commandRegistry.registeredCommands["LLEN"] = commandRegistry.handleListLengthCommand
-	commandRegistry.registeredCommands["LRANGE"] = commandRegistry.handleListRangeCommand
+		// Commandes List
+		"LPUSH":  commandRegistry.handleLeftPushCommand,
+		"RPUSH":  commandRegistry.handleRightPushCommand,
+		"LPOP":   commandRegistry.handleLeftPopCommand,
+		"RPOP":   commandRegistry.handleRightPopCommand,
+		"LLEN":   commandRegistry.handleListLengthCommand,
+		"LRANGE": commandRegistry.handleListRangeCommand,
 
-	// Commandes Set
-	commandRegistry.registeredCommands["SADD"] = commandRegistry.handleSetAddCommand
-	commandRegistry.registeredCommands["SMEMBERS"] = commandRegistry.handleSetMembersCommand
-	commandRegistry.registeredCommands["SISMEMBER"] = commandRegistry.handleSetIsMemberCommand
+		// Commandes Set
+		"SADD":      commandRegistry.handleSetAddCommand,
+		"SMEMBERS":  commandRegistry.handleSetMembersCommand,
+		"SISMEMBER": commandRegistry.handleSetIsMemberCommand,
 
-	// Commandes Hash
-	commandRegistry.registeredCommands["HSET"] = commandRegistry.handleHashSetCommand
-	commandRegistry.registeredCommands["HGET"] = commandRegistry.handleHashGetCommand
-	commandRegistry.registeredCommands["HGETALL"] = commandRegistry.handleHashGetAllCommand
+		// Commandes Hash
+		"HSET":    commandRegistry.handleHashSetCommand,
+		"HGET":    commandRegistry.handleHashGetCommand,
+		"HGETALL": commandRegistry.handleHashGetAllCommand,
 
-	// Commandes utilitaires
-	commandRegistry.registeredCommands["PING"] = commandRegistry.handlePingCommand
-	commandRegistry.registeredCommands["ECHO"] = commandRegistry.handleEchoCommand
-	commandRegistry.registeredCommands["DBSIZE"] = commandRegistry.handleDatabaseSizeCommand
-	commandRegistry.registeredCommands["FLUSHALL"] = commandRegistry.handleFlushAllCommand
-	commandRegistry.registeredCommands["ALAIDE"] = commandRegistry.handleHelpCommand
+		// Commandes utilitaires
+		"PING":     commandRegistry.handlePingCommand,
+		"ECHO":     commandRegistry.handleEchoCommand,
+		"DBSIZE":   commandRegistry.handleDatabaseSizeCommand,
+		"FLUSHALL": commandRegistry.handleFlushAllCommand,
+		"ALAIDE":   commandRegistry.handleHelpCommand,
+	}
+
+	for commandName, handler := range commands {
+		commandRegistry.registeredCommands[commandName] = handler
+	}
 }
 
 // ExecuteCommand exécute une commande donnée
 func (commandRegistry *RedisCommandRegistry) ExecuteCommand(commandName string, commandArguments []string, redisStorage *storage.RedisInMemoryStorage, protocolEncoder *protocol.RedisSerializationProtocolEncoder) error {
-	commandHandler, commandExists := commandRegistry.registeredCommands[strings.ToUpper(commandName)]
+	upperCommandName := strings.ToUpper(commandName)
+	commandHandler, commandExists := commandRegistry.registeredCommands[upperCommandName]
+
 	if !commandExists {
+		suggestion := commandRegistry.findSimilarCommand(upperCommandName)
+		if suggestion != "" {
+			return protocolEncoder.WriteErrorResponse(fmt.Sprintf("ERREUR : commande inconnue '%s'. Vouliez-vous dire '%s' ?", commandName, suggestion))
+		}
 		return protocolEncoder.WriteErrorResponse(fmt.Sprintf("ERREUR : commande inconnue '%s'", commandName))
 	}
 
 	return commandHandler(commandArguments, redisStorage, protocolEncoder)
+}
+
+// findSimilarCommand trouve la commande la plus similaire en utilisant la distance de Levenshtein
+func (commandRegistry *RedisCommandRegistry) findSimilarCommand(input string) string {
+	minDistance := 3 // Seuil de similarité
+	bestMatch := ""
+
+	for commandName := range commandRegistry.registeredCommands {
+		distance := levenshteinDistance(input, commandName)
+		if distance < minDistance {
+			minDistance = distance
+			bestMatch = commandName
+		}
+	}
+
+	return bestMatch
+}
+
+// levenshteinDistance calcule la distance de Levenshtein entre deux chaînes
+func levenshteinDistance(a, b string) int {
+	if len(a) == 0 {
+		return len(b)
+	}
+	if len(b) == 0 {
+		return len(a)
+	}
+
+	matrix := make([][]int, len(a)+1)
+	for i := range matrix {
+		matrix[i] = make([]int, len(b)+1)
+		matrix[i][0] = i
+	}
+	for j := 0; j <= len(b); j++ {
+		matrix[0][j] = j
+	}
+
+	for i := 1; i <= len(a); i++ {
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			matrix[i][j] = minimum(
+				matrix[i-1][j]+1,      // suppression
+				matrix[i][j-1]+1,      // insertion
+				matrix[i-1][j-1]+cost, // substitution
+			)
+		}
+	}
+
+	return matrix[len(a)][len(b)]
+}
+
+func minimum(a, b, c int) int {
+	if a < b && a < c {
+		return a
+	}
+	if b < c {
+		return b
+	}
+	return c
 }

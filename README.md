@@ -1,6 +1,12 @@
 # Redis-Go
+> Implémentation Redis partielle en Go avec protocole RESP (REdis Serialization Protocol) et support des types de données courants.
 
-> Implémentation Redis complète en Go avec protocole RESP (REdis Serialization Protocol) et support des types de données courants.
+## 👨‍💻 Équipe de développement
+|   **Développeur**    | **Classe** |
+|:--------------------:|:----------:|
+| **ALLARD Alexandre** | **`5IW2`** |
+|  **GRANDIN Victor**  | **`5IW2`** |
+|  **NKUMBA Estelle**  | **`5IW2`** |
 
 [![Go 1.24+](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://docker.com/)
